@@ -1,1 +1,1 @@
-200713->cub3d start
+cub3d has not started yet
