@@ -1,1 +1,3 @@
-cub3d has not started yet
+|:--:|:--:|:--:|
+|startDate|201021||
+
