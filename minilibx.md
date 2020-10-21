@@ -1,6 +1,6 @@
-[miniLibX 라이브러리 어떻게 ](http://harm-smits.github.io/42docs/)
+tistory에도 해당 파일 내용을 업로드했습니다.([링크](https://42kchoi.tistory.com/229))
 
-
+<br>
 
 [harm-smits.github.io/42docs/](http://harm-smits.github.io/42docs/)
 
