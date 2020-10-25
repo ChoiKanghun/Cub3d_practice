@@ -227,18 +227,38 @@ int	main(void)
 	t_info info;
 	info.mlx = mlx_init();
 
+// info는 아래 필드 모두를 가지고 있다.
+
+	//  x, y의 초기 위치 
 	info.posX = 12;
 	info.posY = 5;
+
+	// direction Vector 의 초기 방향
 	info.dirX = -1;
 	info.dirY = 0;
+
+	/* camera plane의 2d 버전.    
+        --------------------- plane
+                |
+                | <- direction vector
+                |
+        --------p--------- camera plane
+            (playerPositionX, Y)
+        방향벡터와 카메라 평면은 항상 수직 & 같은 길이. plane의 값이 변경되어도.
+    */
 	info.planeX = 0;
 	info.planeY = 0.66;
 	info.moveSpeed = 0.05;
 	info.rotSpeed = 0.05;
 	
+	// 창을 띄움.
+	// mlx_new_window함수는 해상도를 지정해서 화면을 생성.
+    // 해상도는 너무 높으면 렌더링이 느려짐.
 	info.win = mlx_new_window(info.mlx, width, height, "mlx");
 
+	// main_loop함수를 실행.
 	mlx_loop_hook(info.mlx, &main_loop, &info);
+	// key_press에 대한 이벤트를 등록.
 	mlx_hook(info.win, X_EVENT_KEY_PRESS, 0, &key_press, &info);
 
 	mlx_loop(info.mlx);
