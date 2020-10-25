@@ -132,7 +132,7 @@ int calculateAndSaveToMap(t_info *info)
     while (x < screenWidth)
     {
         // cameraX 는 for문의 x값이 카메라 평면 상에 있을 때의 x좌표.
-        double cameraX = 2 * x / (double)screenWidth - 1;
+        double cameraX = (2 * x / (double)(screenWidth)) - 1;
         // cameraPlaneX == 0; cameraPlaneY == 0.66; dirVecX = -1; dirVecY = 0;
         // 광선의 방향은 방향벡터 + 카메라평면 * 배수.
         double rayDirectionX = info->directionVectorX + info->planeX * cameraX;
@@ -289,7 +289,9 @@ int calculateAndSaveToMap(t_info *info)
 		// texturing calculations
 		// 1을 빼주는 이유는 0번째 텍스쳐도 0, 벽이 없어도 0이기 때문.
 		// 1을 빼지 않는다면 어떻게 될까?
-		int texNum = worldMap[mapX][mapY];
+        // 아마 시작하자마자 뒷방향을 보고 앞으로 걸어나가려고 하면 
+        // segmentation fault가 뜰 것이다.
+		int texNum = worldMap[mapX][mapY] - 1;
         // int textNum = worldMap[mapX][mapY];
 
 		// wallX의 값은 벽의 x면과 부딪힌 경우(side == 0)
@@ -368,7 +370,7 @@ int key_press(int key, t_info *info)
 			info->playerPositionY -= info->directionVectorY * info->moveSpeed;
     }
 
-    // AD
+   // AD
     if (key == KEY_A)
     {
         double oldDirectionX = info->directionVectorX;
