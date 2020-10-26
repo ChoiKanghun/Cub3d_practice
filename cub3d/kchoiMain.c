@@ -1,3 +1,8 @@
+// 변경사항: main() 바로 위 이미지 관련 함수들.
+// s_img, s_info 필드 형태
+// main() 안에 	load_texture(&info); 추가됨.
+// main() 안에서 buf를 더이상 활용하지 않고 img를 활용하도록 변경.
+
 # include "../minilibx/mlx.h"
 # include <math.h>
 # include <string.h>
@@ -22,7 +27,8 @@
 #define X_EVENT_KEY_PRESS   2
 #define X_EVENT_KEY_EXIT    17
 
-
+// numSprites
+#define numSprites 19
 
 /*
 	texture를 입히기 위해서는 verLine() 함수를 이용해 수직선을 그리는 방식은 버려야 한다.
@@ -36,6 +42,45 @@
 #define texWidth 64
 #define texHeight 64
 
+struct	Sprite
+{
+	double		x;
+	double		y;
+	int			texture;
+};
+
+
+struct Sprite   sprite[numSprites] =
+{
+	{20.5, 11.5, 10}, //green light in front of playerstart
+	//green lights in every room
+	{18.5,4.5, 10},
+	{10.0,4.5, 10},
+	{10.0,12.5,10},
+	{3.5, 6.5, 10},
+	{3.5, 20.5,10},
+	{3.5, 14.5,10},
+	{14.5,20.5,10},
+
+	//row of pillars in front of wall: fisheye test
+	{18.5, 10.5, 9},
+	{18.5, 11.5, 9},
+	{18.5, 12.5, 9},
+
+	//some barrels around the map
+	{21.5, 1.5, 8},
+	{15.5, 1.5, 8},
+	{16.0, 1.8, 8},
+	{16.2, 1.2, 8},
+	{3.5,  2.5, 8},
+	{9.5, 15.5, 8},
+	{10.0, 15.1,8},
+	{10.5, 15.8,8},
+};
+
+int sprtieOrder[numSprites];
+int spriteDistance[numSprites];
+
 // get_img_data_addr 함수에서 쓸 변수를 갖고 있는 구조체.
 typedef struct	s_img
 {
@@ -45,6 +90,8 @@ typedef struct	s_img
 	int		size_l;
 	int		bpp;
 	int		endian;
+    int     img_width;
+    int     img_height;
 }				t_img;
 
 typedef struct	s_info
@@ -62,41 +109,106 @@ typedef struct	s_info
 
 // textured에서 아래 세 변수가 추가됨.
     t_img   img;
-    int     **buf;
-    int     texture[8][texHeight * texWidth];
+    int     buf[screenHeight][screenWidth];
+    int     **texture;
+
+// sprites에서 아래 변수가 추가됨
+    int     buf[height][width];
 }				t_info;
+
+typedef struct  s_pair
+{
+    double  first;
+    double  second;
+}               t_pair;
 
 int calculateAndSaveToMap(t_info *info);
 void imageDraw(t_info *info);
 
-// textured 에서 변경된 map. 요소가 추가됐다.
+static int  compare(const void *first, const void *second)
+{
+    if (*(int *)first > *(int *)second)
+        return (1);
+    else if (*(int *)first < *(int *)second)
+        return (-1);
+    else
+        return (0);
+}
+
+void    sort_order(t_pair *orders, int numSprites)
+{
+    t_pair  tmp;
+    for (int i = 0; i < numSprites; i++)
+    {
+        for (int j = 0; j < numSprites - 1; j++)
+        {
+            if (orders[j].first > orders[j + 1].first)
+            {
+                tmp.first = orders[j].first;
+                tmp.second = orders[j].second;
+                orders[j].first = orders[j + 1].first;
+                orders[j].second = orders[j + 1].second;
+                orders[j + 1].first = tmp.first;
+                orders[j + 1].second = tmp.second;
+            }
+        }
+    }
+}
+
+/*
+    1. spriteOrder를 차례로 담고 그 좌표도 차례로 담는다.
+    2. sort_order를 통해 sprites의 first를 기준으로 버블소트 해준다.
+    2.에서 first는 spriteDistance를 의미하고 y좌표는 spriteOrder를 의미한다.
+    3. sort 당시 작은 것부터 담았으므로 그 역으로 만들어준다.
+    4. sprites를 free시킨다.
+*/
+void sortSprites(int *order, double *dist)
+{
+    t_pair  *sprites;
+
+    sprites = (t_pair *)malloc(sizeof(t_pair) * numSprites);
+    for (int i = 0; i < numSprites; i++)
+    {
+        sprites[i].first = dist[i];
+        sprites[i].second = order[i];
+    }
+    sort_order(sprites, numSprites);
+    for (int i = 0; i < numSprites; i++)
+    {
+        dist[i] = sprites[numSprites - i - 1].first;
+        order[i] = sprites[numSprites - i - 1].second;
+    }
+    free(sprites);
+}
+
+// ceiling & floor part에서 바뀐 맵.
 int	worldMap[mapWidth][mapHeight] =
-						{
-							{4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,7,7,7,7,7,7,7,7},
-							{4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7,0,0,0,0,0,0,7},
-							{4,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7},
-							{4,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7},
-							{4,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,7,0,0,0,0,0,0,7},
-							{4,0,4,0,0,0,0,5,5,5,5,5,5,5,5,5,7,7,0,7,7,7,7,7},
-							{4,0,5,0,0,0,0,5,0,5,0,5,0,5,0,5,7,0,0,0,7,7,7,1},
-							{4,0,6,0,0,0,0,5,0,0,0,0,0,0,0,5,7,0,0,0,0,0,0,8},
-							{4,0,7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7,7,7,1},
-							{4,0,8,0,0,0,0,5,0,0,0,0,0,0,0,5,7,0,0,0,0,0,0,8},
-							{4,0,0,0,0,0,0,5,0,0,0,0,0,0,0,5,7,0,0,0,7,7,7,1},
-							{4,0,0,0,0,0,0,5,5,5,5,0,5,5,5,5,7,7,7,7,7,7,7,1},
-							{6,6,6,6,6,6,6,6,6,6,6,0,6,6,6,6,6,6,6,6,6,6,6,6},
-							{8,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4},
-							{6,6,6,6,6,6,0,6,6,6,6,0,6,6,6,6,6,6,6,6,6,6,6,6},
-							{4,4,4,4,4,4,0,4,4,4,6,0,6,2,2,2,2,2,2,2,3,3,3,3},
-							{4,0,0,0,0,0,0,0,0,4,6,0,6,2,0,0,0,0,0,2,0,0,0,2},
-							{4,0,0,0,0,0,0,0,0,0,0,0,6,2,0,0,5,0,0,2,0,0,0,2},
-							{4,0,0,0,0,0,0,0,0,4,6,0,6,2,0,0,0,0,0,2,2,0,2,2},
-							{4,0,6,0,6,0,0,0,0,4,6,0,0,0,0,0,5,0,0,0,0,0,0,2},
-							{4,0,0,5,0,0,0,0,0,4,6,0,6,2,0,0,0,0,0,2,2,0,2,2},
-							{4,0,6,0,6,0,0,0,0,4,6,0,6,2,0,0,5,0,0,2,0,0,0,2},
-							{4,0,0,0,0,0,0,0,0,4,6,0,6,2,0,0,0,0,0,2,0,0,0,2},
-							{4,4,4,4,4,4,4,4,4,4,1,1,1,2,2,2,2,2,2,3,3,3,3,3}
-						};
+{
+  {8,8,8,8,8,8,8,8,8,8,8,4,4,6,4,4,6,4,6,4,4,4,6,4},
+  {8,0,0,0,0,0,0,0,0,0,8,4,0,0,0,0,0,0,0,0,0,0,0,4},
+  {8,0,3,3,0,0,0,0,0,8,8,4,0,0,0,0,0,0,0,0,0,0,0,6},
+  {8,0,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6},
+  {8,0,3,3,0,0,0,0,0,8,8,4,0,0,0,0,0,0,0,0,0,0,0,4},
+  {8,0,0,0,0,0,0,0,0,0,8,4,0,0,0,0,0,6,6,6,0,6,4,6},
+  {8,8,8,8,0,8,8,8,8,8,8,4,4,4,4,4,4,6,0,0,0,0,0,6},
+  {7,7,7,7,0,7,7,7,7,0,8,0,8,0,8,0,8,4,0,4,0,6,0,6},
+  {7,7,0,0,0,0,0,0,7,8,0,8,0,8,0,8,8,6,0,0,0,0,0,6},
+  {7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,8,6,0,0,0,0,0,4},
+  {7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,8,6,0,6,0,6,0,6},
+  {7,7,0,0,0,0,0,0,7,8,0,8,0,8,0,8,8,6,4,6,0,6,6,6},
+  {7,7,7,7,0,7,7,7,7,8,8,4,0,6,8,4,8,3,3,3,0,3,3,3},
+  {2,2,2,2,0,2,2,2,2,4,6,4,0,0,6,0,6,3,0,0,0,0,0,3},
+  {2,2,0,0,0,0,0,2,2,4,0,0,0,0,0,0,4,3,0,0,0,0,0,3},
+  {2,0,0,0,0,0,0,0,2,4,0,0,0,0,0,0,4,3,0,0,0,0,0,3},
+  {1,0,0,0,0,0,0,0,1,4,4,4,4,4,6,0,6,3,3,0,0,0,3,3},
+  {2,0,0,0,0,0,0,0,2,2,2,1,2,2,2,6,6,0,0,5,0,5,0,5},
+  {2,2,0,0,0,0,0,2,2,2,0,0,0,2,2,0,5,0,5,0,0,0,5,5},
+  {2,0,0,0,0,0,0,0,2,0,0,0,0,0,2,5,0,5,0,5,0,5,0,5},
+  {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5},
+  {2,0,0,0,0,0,0,0,2,0,0,0,0,0,2,5,0,5,0,5,0,5,0,5},
+  {2,2,0,0,0,0,0,2,2,2,0,0,0,2,2,0,5,0,5,0,0,0,5,5},
+  {2,2,2,2,1,2,2,2,2,2,2,1,2,2,2,5,5,5,5,5,5,5,5,5}
+};
 
 int main_loop(t_info *info)
 {
@@ -118,17 +230,26 @@ void imageDraw(t_info *info)
 
 int calculateAndSaveToMap(t_info *info)
 {
-    // // '현재' 프레임의 시간.
-    // double time = 0;
-    // // '이전' 프레임의 시간.
-    // // 현재 프레임의 시간 - 이전 프레임의 시간: 이동거리 결정 및 fps 측정
-    // double oldTime = 0;
+    /* 
+        나중에 화면에 올릴 buf의 위에서부터 아래로, 아래서부터 위로 다른 색상을 칠해준다.
+        이렇게하면 가운데에서 다시 buf에 서로 다른 색상을 담는 비효율이 있지만,
+        속도면에서 크게 장애가 되지 않는니 그냥 써주려고 한다.
+    */
+    for (int x = 0; x < screenWidth; x++)
+    {
+        for (int y = 0; y < screenHeight; y++)
+        {
+            info->buf[y][x] = 0xFFFFFF; 
+            info->buf[screenHeight - y - 1][x] = 0x000000;
+            // buf[screenHeight - 1 ~ screenHeight - screenHeight][x] 를 칠해줌.
+        }
+    }
 
     // 화면 생성 후 게임 루프 시작.
     // while문은 전체 프레임을 그려내고 입력을 읽는 역할을 함.
     int x;
 
-    x = 0;
+	x = 0;
     while (x < screenWidth)
     {
         // cameraX 는 for문의 x값이 카메라 평면 상에 있을 때의 x좌표.
@@ -337,7 +458,81 @@ int calculateAndSaveToMap(t_info *info)
 			info->buf[y][x] = color;
 		}
 		x++;
-    } 
+    }
+
+    /*
+        Sprite Casting
+        sprite를 먼 곳에 있는 것부터 가까운 데 있는 순으로 정렬한다.
+        그 이유는 먼 곳에 있는 것이 가까운 곳에 있는 스프라이트를 덮어쓰면 안되니까.
+    */
+    for (int i = 0; i < numSprites; i++)
+    {
+        spriteOrder[i] = i;
+		spriteDistance[i] = \ // 나 ~ 스프라이트까지의 거리 x^2 + y^2
+		((info->posX - sprite[i].x) * (info->posX - sprite[i].x) + \ 
+		(info->posY - sprite[i].y) * (info->posY - sprite[i].y)); //sqrt not taken, unneeded       
+    }
+    sortSprites(spriteOrder, spriteDistance, numSprites);
+    // sprites를 정렬했다면 이제 그릴 차례.
+    for (int i = 0; i < numSprites; i++)
+    {
+        // 나로부터 sprite 위치가 얼마나 떨어져있는지. 상대적인 값.
+        double spriteX = sprite[spriteOrder[i]].x - info->playerPositionX;
+        double spriteY = sprite[spriteOrder[i]].y - info->playerPositionY;
+
+        // 카메라의 역행렬을 이용해 sprite를 변경시킴.
+        double inverseDet = 1.0 / (info->planeX * info->directionVectorY - info->directionVectorX * info->planeY);
+
+        double transformX = inverseDet * \
+            (info->directionVectorY * spriteX - info->directionVectorX * spriteY);
+        double transformY = inverseDet * \
+            (-info->planeY * spriteX + info->planeX * spriteY);
+        
+        int spriteScreenX = (int)((width / 2) * (1 + transformX / transformY));
+
+        #define uDiv 1
+        #define vDiv 1
+        #define vMove 0.0
+
+        int vMoveScreen = (int)(vMove / transformY);
+
+		// 스프라이트의 높이. transformY를 이용하는 건 fishEye 효과를 방지하기 위해서임.
+		int spriteHeight = (int)fabs((height / transformY) / vDiv); 
+		// 현재 스트라이프에서 가장 낮은 픽셀과 가장 높은 픽셀 구하기
+		int drawStartY = -spriteHeight / 2 + height / 2 + vMoveScreen;
+		if(drawStartY < 0) drawStartY = 0;
+		int drawEndY = spriteHeight / 2 + height / 2 + vMoveScreen;
+		if(drawEndY >= height) drawEndY = height - 1;
+
+		// 스프라이트의 너비.
+		int spriteWidth = (int)fabs((height / transformY) / uDiv);
+		int drawStartX = -spriteWidth / 2 + spriteScreenX;
+		if(drawStartX < 0) drawStartX = 0;
+		int drawEndX = spriteWidth / 2 + spriteScreenX;
+		if(drawEndX >= width) drawEndX = width - 1;
+
+		// 스프라이트의 모든 세로 스트라이프를 loop.
+		for(int stripe = drawStartX; stripe < drawEndX; stripe++)
+		{
+			int texX = (int)((256 * (stripe - (-spriteWidth / 2 + spriteScreenX)) * texWidth / spriteWidth) / 256);
+			// 조건:
+			//1) 카메라 플레인 앞에 있을 것.
+			//2) 화면 위에서 왼쪽, 또는 오른쪽에 있을 것.
+			//4) 수직거리와 함께 ZBuffer
+			if (transformY > 0 && stripe > 0 && stripe < width && transformY < info->zBuffer[stripe])
+			for(int y = drawStartY; y < drawEndY; y++) //for every pixel of the current stripe
+			{
+                //256, 128은  float을 방지하기 위한 요소임.
+				int d = (y-vMoveScreen) * 256 - screenHeight * 128 + spriteHeight * 128; 
+				int texY = ((d * texHeight) / spriteHeight) / 256;
+				// 현재 텍스쳐의 색깔을 가져온다.
+                int color = info->texture[sprite[spriteOrder[i]].texture][texWidth * texY + texX];
+                
+				if((color & 0x00FFFFFF) != 0) info->buf[y][stripe] = color; 
+                // 검정색은 보이지 않는 색깔이기 때문에 검정색이 아닐 때만 color를 칠한다.
+			}
+		}
+    }
 }
 
 int key_press(int key, t_info *info)
@@ -398,34 +593,66 @@ int key_press(int key, t_info *info)
     return (0);
 }
 
+/*
+	https://42kchoi.tistory.com/229?category=886844
+	위 링크에서 설명했듯이 mlx_png_file_to_image는 메모리 누수 이슈가 있기 때문에,
+	mlx_xpm_file_to_image를 사용한다.
+	참고로 여기서 path는 상대경로다.
+*/
+void	load_image(t_info *info, int *texture, char *path, t_img *img)
+{
+	img->img = mlx_xpm_file_to_image(info->mlx, path, &img->img_width, &img->img_height);
+	img->data = (int *)mlx_get_data_addr(img->img, &img->bpp, &img->size_l, &img->endian);
+	for (int y = 0; y < img->img_height; y++)
+	{
+		for (int x = 0; x < img->img_width; x++)
+		{
+			texture[img->img_width * y + x] = img->data[img->img_width * y + x];
+		}
+	}
+	mlx_destroy_image(info->mlx, img->img);
+}
+
+void	load_texture(t_info *info)
+{
+	t_img	img;
+
+	load_image(info, info->texture[0], "textures/eagle.xpm", &img);
+	load_image(info, info->texture[1], "textures/redbrick.xpm", &img);
+	load_image(info, info->texture[2], "textures/purplestone.xpm", &img);
+	load_image(info, info->texture[3], "textures/greystone.xpm", &img);
+	load_image(info, info->texture[4], "textures/bluestone.xpm", &img);
+	load_image(info, info->texture[5], "textures/mossy.xpm", &img);
+	load_image(info, info->texture[6], "textures/wood.xpm", &img);
+	load_image(info, info->texture[7], "textures/colorstone.xpm", &img);
+}
+
+
 int main()
 {
     t_info info;
     info.mlx = mlx_init();
 
 	// info는 아래 필드 모두를 가지고 있다.
-	info.playerPositionX = 12;
-	info.playerPositionY = 5;
-	info.directionVectorX = -1;
-	info.directionVectorY = 0;
-	info.planeX = 0;
+	info.playerPositionX = 22.0;
+	info.playerPositionY = 11.5;
+	info.directionVectorX = -1.0;
+	info.directionVectorY = 0.0;
+	info.planeX = 0.0;
 	info.planeY = 0.66;
 	info.moveSpeed = 0.05;
 	info.rotSpeed = 0.05;
 	
-/* 
-		버퍼를 초기화해준다.
-		버퍼는 우리가 띄운 창의 크기와 같다.
-		x->screenWidth 로 가면서 화면을 그려내기 때문에
-		y값이 버퍼의 앞에 온다.(info.buf는 [y][x] 형태)
-	*/
-	info.buf = (int **)malloc(sizeof(int *) * screenHeight);
-	for (int i = 0; i < screenHeight; i++)
-		info.buf[i] = (int *)malloc(sizeof(int) * screenWidth);
 
-	for (int i = 0; i < screenHeight; i++)
-		for (int j = 0; j < screenWidth; j++)
-			info.buf[i][j] = 0;
+	if (!(info.texture = (int **)malloc(sizeof(int *) * 8)))
+        return (-1);
+	for (int i = 0; i < 8; i++)
+		if (!(info.texture[i] = (int *)malloc(sizeof(int) * (texHeight * texWidth))))
+            return (-1);
+
+	for (int i = 0; i < 8; i++)
+		for (int j = 0; j < texHeight * texWidth; j++)
+			info.texture[i][j] = 0;
 
 	/*
 		info.texture 변수는 다음과 같이 선언돼 있는데,
@@ -437,29 +664,8 @@ int main()
 		for (int j = 0; j < texHeight * texWidth; j++)
 			info.texture[i][j] = 0;
 
-	/*
-		텍스쳐를 생성한다. 
-		(비트 연산자인) xor 컬러 및 x, xy 컬러를 지정한다.
-		세 가지 값은 각각 xor패턴, 그라데이션, 벽돌스타일의 패턴을 나타낸다.
-		각각의 텍스쳐 값 뒤에 그것이 무엇을 의미하는지에 대한 주석이 달려 있습니다.
-	*/    	
-	for (int x = 0; x < texWidth; x++)
-    {
-		for (int y = 0; y < texHeight; y++)
-        {
-			int xorcolor = (x * 256 / texWidth) ^ (y * 256 / texHeight);
-			int ycolor = y * 256 / texHeight;
-			int xycolor = y * 128 / texHeight + x * 128 / texWidth;
-			info.texture[0][texWidth * y + x] = 65536 * 254 * (x != y && x != texWidth - y); //flat red texture with black cross
-			info.texture[1][texWidth * y + x] = xycolor + 256 * xycolor + 65536 * xycolor; //sloped greyscale
-			info.texture[2][texWidth * y + x] = 256 * xycolor + 65536 * xycolor; //sloped yellow gradient
-			info.texture[3][texWidth * y + x] = xorcolor + 256 * xorcolor + 65536 * xorcolor; //xor greyscale
-			info.texture[4][texWidth * y + x] = 256 * xorcolor; //xor green
-			info.texture[5][texWidth * y + x] = 65536 * 192 * (x % 16 && y % 16); //red bricks
-			info.texture[6][texWidth * y + x] = 65536 * ycolor; //red gradient
-			info.texture[7][texWidth * y + x] = 128 + 256 * 128 + 65536 * 128; //flat grey texture
-        }
-    }
+	load_texture(&info);
+
     // textured에서 추가된 코드 세 줄.
 	info.win = mlx_new_window(info.mlx, screenWidth, screenHeight, "mlx");
 	info.img.img = mlx_new_image(info.mlx, screenWidth, screenHeight);
