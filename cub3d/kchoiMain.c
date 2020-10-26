@@ -113,7 +113,7 @@ typedef struct	s_info
     int     **texture;
 
 // sprites에서 아래 변수가 추가됨
-    int     buf[height][width];
+    
 }				t_info;
 
 typedef struct  s_pair
@@ -125,61 +125,61 @@ typedef struct  s_pair
 int calculateAndSaveToMap(t_info *info);
 void imageDraw(t_info *info);
 
-static int  compare(const void *first, const void *second)
-{
-    if (*(int *)first > *(int *)second)
-        return (1);
-    else if (*(int *)first < *(int *)second)
-        return (-1);
-    else
-        return (0);
-}
+// static int  compare(const void *first, const void *second)
+// {
+//     if (*(int *)first > *(int *)second)
+//         return (1);
+//     else if (*(int *)first < *(int *)second)
+//         return (-1);
+//     else
+//         return (0);
+// }
 
-void    sort_order(t_pair *orders, int numSprites)
-{
-    t_pair  tmp;
-    for (int i = 0; i < numSprites; i++)
-    {
-        for (int j = 0; j < numSprites - 1; j++)
-        {
-            if (orders[j].first > orders[j + 1].first)
-            {
-                tmp.first = orders[j].first;
-                tmp.second = orders[j].second;
-                orders[j].first = orders[j + 1].first;
-                orders[j].second = orders[j + 1].second;
-                orders[j + 1].first = tmp.first;
-                orders[j + 1].second = tmp.second;
-            }
-        }
-    }
-}
+// void    sort_order(t_pair *orders, int numSprites)
+// {
+//     t_pair  tmp;
+//     for (int i = 0; i < numSprites; i++)
+//     {
+//         for (int j = 0; j < numSprites - 1; j++)
+//         {
+//             if (orders[j].first > orders[j + 1].first)
+//             {
+//                 tmp.first = orders[j].first;
+//                 tmp.second = orders[j].second;
+//                 orders[j].first = orders[j + 1].first;
+//                 orders[j].second = orders[j + 1].second;
+//                 orders[j + 1].first = tmp.first;
+//                 orders[j + 1].second = tmp.second;
+//             }
+//         }
+//     }
+// }
 
-/*
-    1. spriteOrder를 차례로 담고 그 좌표도 차례로 담는다.
-    2. sort_order를 통해 sprites의 first를 기준으로 버블소트 해준다.
-    2.에서 first는 spriteDistance를 의미하고 y좌표는 spriteOrder를 의미한다.
-    3. sort 당시 작은 것부터 담았으므로 그 역으로 만들어준다.
-    4. sprites를 free시킨다.
-*/
-void sortSprites(int *order, double *dist)
-{
-    t_pair  *sprites;
+// /*
+//     1. spriteOrder를 차례로 담고 그 좌표도 차례로 담는다.
+//     2. sort_order를 통해 sprites의 first를 기준으로 버블소트 해준다.
+//     2.에서 first는 spriteDistance를 의미하고 y좌표는 spriteOrder를 의미한다.
+//     3. sort 당시 작은 것부터 담았으므로 그 역으로 만들어준다.
+//     4. sprites를 free시킨다.
+// */
+// void sortSprites(int *order, double *dist)
+// {
+//     t_pair  *sprites;
 
-    sprites = (t_pair *)malloc(sizeof(t_pair) * numSprites);
-    for (int i = 0; i < numSprites; i++)
-    {
-        sprites[i].first = dist[i];
-        sprites[i].second = order[i];
-    }
-    sort_order(sprites, numSprites);
-    for (int i = 0; i < numSprites; i++)
-    {
-        dist[i] = sprites[numSprites - i - 1].first;
-        order[i] = sprites[numSprites - i - 1].second;
-    }
-    free(sprites);
-}
+//     sprites = (t_pair *)malloc(sizeof(t_pair) * numSprites);
+//     for (int i = 0; i < numSprites; i++)
+//     {
+//         sprites[i].first = dist[i];
+//         sprites[i].second = order[i];
+//     }
+//     sort_order(sprites, numSprites);
+//     for (int i = 0; i < numSprites; i++)
+//     {
+//         dist[i] = sprites[numSprites - i - 1].first;
+//         order[i] = sprites[numSprites - i - 1].second;
+//     }
+//     free(sprites);
+// }
 
 // ceiling & floor part에서 바뀐 맵.
 int	worldMap[mapWidth][mapHeight] =
@@ -460,79 +460,78 @@ int calculateAndSaveToMap(t_info *info)
 		x++;
     }
 
-    /*
-        Sprite Casting
-        sprite를 먼 곳에 있는 것부터 가까운 데 있는 순으로 정렬한다.
-        그 이유는 먼 곳에 있는 것이 가까운 곳에 있는 스프라이트를 덮어쓰면 안되니까.
-    */
-    for (int i = 0; i < numSprites; i++)
-    {
-        spriteOrder[i] = i;
-		spriteDistance[i] = \ // 나 ~ 스프라이트까지의 거리 x^2 + y^2
-		((info->posX - sprite[i].x) * (info->posX - sprite[i].x) + \ 
-		(info->posY - sprite[i].y) * (info->posY - sprite[i].y)); //sqrt not taken, unneeded       
-    }
-    sortSprites(spriteOrder, spriteDistance, numSprites);
-    // sprites를 정렬했다면 이제 그릴 차례.
-    for (int i = 0; i < numSprites; i++)
-    {
-        // 나로부터 sprite 위치가 얼마나 떨어져있는지. 상대적인 값.
-        double spriteX = sprite[spriteOrder[i]].x - info->playerPositionX;
-        double spriteY = sprite[spriteOrder[i]].y - info->playerPositionY;
+    // /*
+    //     Sprite Casting
+    //     sprite를 먼 곳에 있는 것부터 가까운 데 있는 순으로 정렬한다.
+    //     그 이유는 먼 곳에 있는 것이 가까운 곳에 있는 스프라이트를 덮어쓰면 안되니까.
+    // */
+    // for (int i = 0; i < numSprites; i++)
+    // {
+    //     spriteOrder[i] = i;
+	// 	spriteDistance[i] = \ // 나 ~ 스프라이트까지의 거리 x^2 + y^2
+	// 	((info->posX - sprite[i].x) * (info->posX - sprite[i].x) + (info->posY - sprite[i].y) * (info->posY - sprite[i].y)); //sqrt not taken, unneeded       
+    // }
+    // sortSprites(spriteOrder, spriteDistance, numSprites);
+    // // sprites를 정렬했다면 이제 그릴 차례.
+    // for (int i = 0; i < numSprites; i++)
+    // {
+    //     // 나로부터 sprite 위치가 얼마나 떨어져있는지. 상대적인 값.
+    //     double spriteX = sprite[spriteOrder[i]].x - info->playerPositionX;
+    //     double spriteY = sprite[spriteOrder[i]].y - info->playerPositionY;
 
-        // 카메라의 역행렬을 이용해 sprite를 변경시킴.
-        double inverseDet = 1.0 / (info->planeX * info->directionVectorY - info->directionVectorX * info->planeY);
+    //     // 카메라의 역행렬을 이용해 sprite를 변경시킴.
+    //     double inverseDet = 1.0 / (info->planeX * info->directionVectorY - info->directionVectorX * info->planeY);
 
-        double transformX = inverseDet * \
-            (info->directionVectorY * spriteX - info->directionVectorX * spriteY);
-        double transformY = inverseDet * \
-            (-info->planeY * spriteX + info->planeX * spriteY);
+    //     double transformX = inverseDet * \
+    //         (info->directionVectorY * spriteX - info->directionVectorX * spriteY);
+    //     double transformY = inverseDet * \
+    //         (-info->planeY * spriteX + info->planeX * spriteY);
         
-        int spriteScreenX = (int)((width / 2) * (1 + transformX / transformY));
+    //     int spriteScreenX = (int)((width / 2) * (1 + transformX / transformY));
 
-        #define uDiv 1
-        #define vDiv 1
-        #define vMove 0.0
+    //     #define uDiv 1
+    //     #define vDiv 1
+    //     #define vMove 0.0
 
-        int vMoveScreen = (int)(vMove / transformY);
+    //     int vMoveScreen = (int)(vMove / transformY);
 
-		// 스프라이트의 높이. transformY를 이용하는 건 fishEye 효과를 방지하기 위해서임.
-		int spriteHeight = (int)fabs((height / transformY) / vDiv); 
-		// 현재 스트라이프에서 가장 낮은 픽셀과 가장 높은 픽셀 구하기
-		int drawStartY = -spriteHeight / 2 + height / 2 + vMoveScreen;
-		if(drawStartY < 0) drawStartY = 0;
-		int drawEndY = spriteHeight / 2 + height / 2 + vMoveScreen;
-		if(drawEndY >= height) drawEndY = height - 1;
+	// 	// 스프라이트의 높이. transformY를 이용하는 건 fishEye 효과를 방지하기 위해서임.
+	// 	int spriteHeight = (int)fabs((height / transformY) / vDiv); 
+	// 	// 현재 스트라이프에서 가장 낮은 픽셀과 가장 높은 픽셀 구하기
+	// 	int drawStartY = -spriteHeight / 2 + height / 2 + vMoveScreen;
+	// 	if(drawStartY < 0) drawStartY = 0;
+	// 	int drawEndY = spriteHeight / 2 + height / 2 + vMoveScreen;
+	// 	if(drawEndY >= height) drawEndY = height - 1;
 
-		// 스프라이트의 너비.
-		int spriteWidth = (int)fabs((height / transformY) / uDiv);
-		int drawStartX = -spriteWidth / 2 + spriteScreenX;
-		if(drawStartX < 0) drawStartX = 0;
-		int drawEndX = spriteWidth / 2 + spriteScreenX;
-		if(drawEndX >= width) drawEndX = width - 1;
+	// 	// 스프라이트의 너비.
+	// 	int spriteWidth = (int)fabs((height / transformY) / uDiv);
+	// 	int drawStartX = -spriteWidth / 2 + spriteScreenX;
+	// 	if(drawStartX < 0) drawStartX = 0;
+	// 	int drawEndX = spriteWidth / 2 + spriteScreenX;
+	// 	if(drawEndX >= width) drawEndX = width - 1;
 
-		// 스프라이트의 모든 세로 스트라이프를 loop.
-		for(int stripe = drawStartX; stripe < drawEndX; stripe++)
-		{
-			int texX = (int)((256 * (stripe - (-spriteWidth / 2 + spriteScreenX)) * texWidth / spriteWidth) / 256);
-			// 조건:
-			//1) 카메라 플레인 앞에 있을 것.
-			//2) 화면 위에서 왼쪽, 또는 오른쪽에 있을 것.
-			//4) 수직거리와 함께 ZBuffer
-			if (transformY > 0 && stripe > 0 && stripe < width && transformY < info->zBuffer[stripe])
-			for(int y = drawStartY; y < drawEndY; y++) //for every pixel of the current stripe
-			{
-                //256, 128은  float을 방지하기 위한 요소임.
-				int d = (y-vMoveScreen) * 256 - screenHeight * 128 + spriteHeight * 128; 
-				int texY = ((d * texHeight) / spriteHeight) / 256;
-				// 현재 텍스쳐의 색깔을 가져온다.
-                int color = info->texture[sprite[spriteOrder[i]].texture][texWidth * texY + texX];
+	// 	// 스프라이트의 모든 세로 스트라이프를 loop.
+	// 	for(int stripe = drawStartX; stripe < drawEndX; stripe++)
+	// 	{
+	// 		int texX = (int)((256 * (stripe - (-spriteWidth / 2 + spriteScreenX)) * texWidth / spriteWidth) / 256);
+	// 		// 조건:
+	// 		//1) 카메라 플레인 앞에 있을 것.
+	// 		//2) 화면 위에서 왼쪽, 또는 오른쪽에 있을 것.
+	// 		//4) 수직거리와 함께 ZBuffer
+	// 		if (transformY > 0 && stripe > 0 && stripe < width && transformY < info->zBuffer[stripe])
+	// 		for(int y = drawStartY; y < drawEndY; y++) //for every pixel of the current stripe
+	// 		{
+    //             //256, 128은  float을 방지하기 위한 요소임.
+	// 			int d = (y-vMoveScreen) * 256 - screenHeight * 128 + spriteHeight * 128; 
+	// 			int texY = ((d * texHeight) / spriteHeight) / 256;
+	// 			// 현재 텍스쳐의 색깔을 가져온다.
+    //             int color = info->texture[sprite[spriteOrder[i]].texture][texWidth * texY + texX];
                 
-				if((color & 0x00FFFFFF) != 0) info->buf[y][stripe] = color; 
-                // 검정색은 보이지 않는 색깔이기 때문에 검정색이 아닐 때만 color를 칠한다.
-			}
-		}
-    }
+	// 			if((color & 0x00FFFFFF) != 0) info->buf[y][stripe] = color; 
+    //             // 검정색은 보이지 않는 색깔이기 때문에 검정색이 아닐 때만 color를 칠한다.
+	// 		}
+	// 	}
+    // }
 }
 
 int key_press(int key, t_info *info)
