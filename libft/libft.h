@@ -6,7 +6,7 @@
 /*   By: kchoi <kchoi@student.42seoul.kr>           +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/04/11 14:17:46 by kchoi             #+#    #+#             */
-/*   Updated: 2020/04/11 14:40:46 by kchoi            ###   ########.fr       */
+/*   Updated: 2020/10/30 11:20:20 by kchoi            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,6 +24,7 @@ typedef struct			s_list
 
 typedef unsigned char	t_uchar;
 
+void					ft_putstr(char *s);
 int						ft_atoi(const char *str);
 void					ft_bzero(void *s, size_t n);
 int						ft_isalnum(int c);
